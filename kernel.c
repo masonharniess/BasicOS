@@ -1,4 +1,5 @@
 #include "kernel.h"
+#include "common.h"
 
 typedef unsigned char uint8_t;
 typedef unsigned int uint32_t;
@@ -36,10 +37,8 @@ void putchar(char ch) {
 }
 
 void kernel_main(void) {
-  const char *s = "\n\nSuccessful boot of BasicOS.\n";
-  for (int i = 0; s[i] != '\0'; i++) {
-    putchar(s[i]);
-  }
+  printf("\n\nSuccessful boot of BasicOS.\n");
+  // printf("1 + 2 = %d, %x\n", 1 + 2, 0x1234abcd);
 
   for (;;) {
     __asm__ __volatile__("wfi");
