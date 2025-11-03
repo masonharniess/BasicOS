@@ -66,9 +66,13 @@ void yield(void) {
         return;
 
     __asm__ __volatile__(
-    "csrw sscratch, %[sscratch]\n"
-    :
-    : [sscratch] "r" ((uint32_t) &next->stack[sizeof(next->stack)])
+        "sfence.vma\n"
+        "csrw satp, %[satp]\n"
+        "sfence.vma\n"   
+        "csrw sscratch, %[sscratch]\n"
+        :
+        : [satp] "r" (SATP_SV32 | ((uint32_t) next->page_table / PAGE_SIZE)),
+          [sscratch] "r" ((uint32_t) &next->stack[sizeof(next->stack)])
     );
 
     void switch_context(uint32_t *prev_sp, uint32_t *next_sp);
@@ -121,11 +125,33 @@ __attribute__((naked)) void switch_context(uint32_t *prev_sp, uint32_t *next_sp)
   );
 }
 
-struct process procs[PROCS_MAX]; // all process control structures.
+extern char __kernel_base[];
+struct process procs[PROCS_MAX]; // all process control structures
+
+// map pages in two-level page system using RISC-V's Sv32 paging mechanism
+void map_page(uint32_t *table1, uint32_t vaddr, paddr_t paddr, uint32_t flags) {
+    if (!is_aligned(vaddr, PAGE_SIZE))
+        PANIC("unaligned vaddr %x", vaddr);
+
+    if (!is_aligned(paddr, PAGE_SIZE))
+        PANIC("unaligned paddr %x", paddr);
+
+    uint32_t vpn1 = (vaddr >> 22) & 0x3ff;
+    if ((table1[vpn1] & PAGE_V) == 0) {
+        // create the 1st level page table if it doesn't exist
+        uint32_t pt_paddr = alloc_pages(1);
+        table1[vpn1] = ((pt_paddr / PAGE_SIZE) << 10) | PAGE_V;
+    }
+
+    // set the 2nd level page table entry to map the physical page.
+    uint32_t vpn0 = (vaddr >> 12) & 0x3ff;
+    uint32_t *table0 = (uint32_t *) ((table1[vpn1] >> 10) * PAGE_SIZE);
+    table0[vpn0] = ((paddr / PAGE_SIZE) << 10) | flags | PAGE_V;
+}
 
 // process creation — take entry point as parameter and return pointer to created process struct
 struct process *create_process(uint32_t pc) {
-    // find an unused process control structure.
+    // find an unused process control structure
     struct process *proc = NULL;
     int i;
     for (i = 0; i < PROCS_MAX; i++) {
@@ -138,7 +164,7 @@ struct process *create_process(uint32_t pc) {
     if (!proc)
         PANIC("no free process slots");
 
-    // stack callee-saved registers. These register values will be restored in the first context switch in switch_context.
+    // stack callee-saved registers. These register values will be restored in the first context switch in switch_context
     uint32_t *sp = (uint32_t *) &proc->stack[sizeof(proc->stack)];
     *--sp = 0;                      // s11
     *--sp = 0;                      // s10
@@ -154,10 +180,15 @@ struct process *create_process(uint32_t pc) {
     *--sp = 0;                      // s0
     *--sp = (uint32_t) pc;          // ra
 
-    // initialise fields.
+    uint32_t *page_table = (uint32_t *) alloc_pages(1);
+    for (paddr_t paddr = (paddr_t) __kernel_base; paddr < (paddr_t) __free_ram_end; paddr += PAGE_SIZE) 
+    map_page(page_table, paddr, paddr, PAGE_R | PAGE_W | PAGE_X);
+
+    // initialise fields
     proc->pid = i + 1;
     proc->state = PROC_RUNNABLE;
     proc->sp = (uint32_t) sp;
+    proc->page_table = page_table;
     return proc;
 }
 
@@ -307,10 +338,10 @@ void kernel_main(void) {
   // printf("alloc_pages test: paddr1=%x\n", paddr1);
 
   // test process creation
-  proc_a = create_process((uint32_t) proc_a_entry);
-  proc_b = create_process((uint32_t) proc_b_entry);
+  //proc_a = create_process((uint32_t) proc_a_entry);
+  //proc_b = create_process((uint32_t) proc_b_entry);
   // proc_a_entry();
-
+  
   // yield();
   // PANIC("switched to idle process");
 
