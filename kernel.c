@@ -44,6 +44,41 @@ paddr_t alloc_pages(uint32_t n) {
     return paddr;
 }
 
+extern struct process procs[PROCS_MAX];
+
+struct process *current_proc; // currently running process
+struct process *idle_proc;    // idle process
+
+// scheduler — gives up the CPU to another process voluntarily
+void yield(void) {
+    // search for a runnable process
+    struct process *next = idle_proc;
+    for (int i = 0; i < PROCS_MAX; i++) {
+        struct process *proc = &procs[(current_proc->pid + i) % PROCS_MAX];
+        if (proc->state == PROC_RUNNABLE && proc->pid > 0) {
+            next = proc;
+            break;
+        }
+    }
+
+    // if there's no runnable process other than the current one, return and continue processing
+    if (next == current_proc)
+        return;
+
+    __asm__ __volatile__(
+    "csrw sscratch, %[sscratch]\n"
+    :
+    : [sscratch] "r" ((uint32_t) &next->stack[sizeof(next->stack)])
+    );
+
+    void switch_context(uint32_t *prev_sp, uint32_t *next_sp);
+
+    // context switch
+    struct process *prev = current_proc;
+    current_proc = next;
+    switch_context(&prev->sp, &next->sp);
+}
+
 // context-switching algorithm
 __attribute__((naked)) void switch_context(uint32_t *prev_sp, uint32_t *next_sp) {
   __asm__ __volatile__(
@@ -140,8 +175,9 @@ void proc_a_entry(void) {
     printf("starting process A\n");
     while (1) {
         putchar('A');
-        switch_context(&proc_a->sp, &proc_b->sp);
-        delay();
+        // switch_context(&proc_a->sp, &proc_b->sp);
+        // delay();
+        yield();
     }
 }
 
@@ -150,8 +186,9 @@ void proc_b_entry(void) {
     printf("starting process B\n");
     while (1) {
         putchar('B');
-        switch_context(&proc_b->sp, &proc_a->sp);
-        delay();
+        // switch_context(&proc_b->sp, &proc_a->sp);
+        // delay();
+        yield();
     }
 }
 
@@ -160,7 +197,8 @@ __attribute__((naked))
 __attribute__((aligned(4)))
 void kernel_entry(void) {
     __asm__ __volatile__(
-        "csrw sscratch, sp\n"
+        // retrieve the kernel stack of the running process from sscratch.
+        "csrrw sp, sscratch, sp\n"
         "addi sp, sp, -4 * 31\n"
         "sw ra,  4 * 0(sp)\n"
         "sw gp,  4 * 1(sp)\n"
@@ -193,8 +231,13 @@ void kernel_entry(void) {
         "sw s10, 4 * 28(sp)\n"
         "sw s11, 4 * 29(sp)\n"
 
+        // retrieve and save the sp at the time of exception.
         "csrr a0, sscratch\n"
-        "sw a0, 4 * 30(sp)\n"
+        "sw a0,  4 * 30(sp)\n"
+
+        // reset the kernel stack.
+        "addi a0, sp, 4 * 31\n"
+        "csrw sscratch, a0\n"
 
         "mv a0, sp\n"
         "call handle_trap\n"
@@ -243,14 +286,16 @@ void handle_trap(struct trap_frame *f) {
     PANIC("unexpected trap scause=%x, stval=%x, sepc=%x\n", scause, stval, user_pc);
 }
 
-
-
 void kernel_main(void) {
   memset(__bss, 0, (size_t) __bss_end - (size_t) __bss);
 
   // trigger exception
   // WRITE_CSR(stvec, (uint32_t) kernel_entry);
   // __asm__ __volatile__("unimp");
+  
+  idle_proc = create_process((uint32_t) NULL);
+  idle_proc->pid = 0; // idle
+  current_proc = idle_proc;
 
   printf("\n\nSuccessful boot of BasicOS.\n");
   // printf("1 + 2 = %d, %x\n", 1 + 2, 0x1234abcd);
@@ -262,9 +307,12 @@ void kernel_main(void) {
   // printf("alloc_pages test: paddr1=%x\n", paddr1);
 
   // test process creation
-  // proc_a = create_process((uint32_t) proc_a_entry);
-  // proc_b = create_process((uint32_t) proc_b_entry);
+  proc_a = create_process((uint32_t) proc_a_entry);
+  proc_b = create_process((uint32_t) proc_b_entry);
   // proc_a_entry();
+
+  // yield();
+  // PANIC("switched to idle process");
 
   for (;;) {
     __asm__ __volatile__("wfi");
