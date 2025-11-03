@@ -22,6 +22,18 @@
         __asm__ __volatile__("csrw " #reg ", %0" ::"r"(__tmp));                \
     } while (0)
 
+#define PROCS_MAX 8       // maximum number of processes
+
+#define PROC_UNUSED   0   // unused process control structure
+#define PROC_RUNNABLE 1   // runnable process
+
+struct process {
+    int pid;             // process ID
+    int state;           // process state: PROC_UNUSED or PROC_RUNNABLE
+    vaddr_t sp;          // stack pointer
+    uint8_t stack[8192]; // kernel stack
+};
+
 struct sbiret {
   long error;
   long value;
