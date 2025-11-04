@@ -13,26 +13,6 @@ int syscall(int sysno, int arg0, int arg1, int arg2) {
   return a0;
 }
 
-__attribute__((noreturn)) void exit(void) {
-  syscall(SYS_EXIT, 0, 0, 0);
-  for (;;);
-}
-
-
-
-__attribute__((section(".text.start")))
-__attribute__((naked))
-void start(void) {
-  __asm__ __volatile__(
-    "mv sp, %[stack_top] \n"
-    "call main           \n"
-    "call exit           \n"
-    :: [stack_top] "r" (__stack_top)
-  );
-}
-
-
-
 void putchar(char ch) {
   syscall(SYS_PUTCHAR, ch, 0, 0);
 }
@@ -47,4 +27,20 @@ int readfile(const char *filename, char *buf, int len) {
 
 int writefile(const char *filename, const char *buf, int len) {
     return syscall(SYS_WRITEFILE, (int) filename, (int) buf, len);
+}
+
+__attribute__((noreturn)) void exit(void) {
+  syscall(SYS_EXIT, 0, 0, 0);
+  for (;;);
+}
+
+__attribute__((section(".text.start")))
+__attribute__((naked))
+void start(void) {
+  __asm__ __volatile__(
+    "mv sp, %[stack_top] \n"
+    "call main           \n"
+    "call exit           \n"
+    :: [stack_top] "r" (__stack_top)
+  );
 }

@@ -34,5 +34,5 @@ void main(void) {
       writefile("hello.txt", "Hello from shell!\n", 19);
     else
       printf("unknown command: %s\n", cmdline);
-}
+  }
 }
