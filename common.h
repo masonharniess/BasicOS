@@ -1,5 +1,7 @@
 #pragma once
 
+#define SYS_EXIT    3
+#define SYS_GETCHAR 2
 #define va_list __builtin_va_list
 #define va_start __builtin_va_start
 #define va_end __builtin_va_end
@@ -15,6 +17,8 @@
 #define va_start __builtin_va_start
 #define va_end __builtin_va_end
 #define va_arg __builtin_va_arg
+
+#define SYS_PUTCHAR 1
 
 #define PAGE_SIZE 4096
 

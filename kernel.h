@@ -2,7 +2,7 @@
 #pragma once
 
 #define SSTATUS_SPIE (1 << 5)
-
+#define PROC_EXITED   2
 #define PANIC(fmt, ...)                                                        \
     do {                                                                       \
         printf("PANIC: %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__);  \
@@ -39,6 +39,8 @@
 
 // the base virtual address of an application image. This needs to match the starting address defined in `user.ld`.
 #define USER_BASE 0x1000000
+
+#define SCAUSE_ECALL 8
 
 struct process {
     int pid;              // process ID

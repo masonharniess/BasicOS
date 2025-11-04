@@ -4,40 +4,40 @@ void putchar(char ch);
 
 // copies n bytes from src to dst
 void *memcpy(void *dst, const void *src, size_t n) {
-    uint8_t *d = (uint8_t *) dst;
+  uint8_t *d = (uint8_t *) dst;
     const uint8_t *s = (const uint8_t *) src;
     while (n--)
-        *d++ = *s++;
+      *d++ = *s++;
     return dst;
 }
 
 // fills first n bytes of buf with c
 void *memset(void *buf, char c, size_t n) {
-    uint8_t *p = (uint8_t *) buf;
-    while (n--)
-        *p++ = c;
-    return buf;
+  uint8_t *p = (uint8_t *) buf;
+  while (n--)
+    *p++ = c;
+  return buf;
 }
 
 // copies string from src to dst
 char *strcpy(char *dst, const char *src) {
-    char *d = dst;
-    while (*src)
-        *d++ = *src++;
-    *d = '\0';
-    return dst;
+  char *d = dst;
+  while (*src)
+    *d++ = *src++;
+  *d = '\0';
+  return dst;
 }
 
 // compare s1 and s2
 int strcmp(const char *s1, const char *s2) {
-    while (*s1 && *s2) {
-        if (*s1 != *s2)
-            break;
-        s1++;
-        s2++;
-    }
+  while (*s1 && *s2) {
+    if (*s1 != *s2)
+        break;
+    s1++;
+    s2++;
+  }
 
-    return *(unsigned char *)s1 - *(unsigned char *)s2;
+  return *(unsigned char *)s1 - *(unsigned char *)s2;
 }
 
 // take a format string and embed values for printing
