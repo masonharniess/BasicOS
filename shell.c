@@ -31,7 +31,7 @@ void main(void) {
       printf("%s\n", buf);
     } 
     else if (strcmp(cmdline, "writefile") == 0)
-      writefile("test1.txt", "Hello from shell!\n", 19);
+      writefile("test1.txt", "Message from shell.\n", 19);
     else
       printf("unknown command: %s\n", cmdline);
   }
