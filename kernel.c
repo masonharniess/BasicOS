@@ -546,6 +546,8 @@ void handle_trap(struct trap_frame *f) {
 }
 
 void kernel_main(void) {
+	printf("\n\nSuccessful boot of BasicOS.");
+
 	memset(__bss, 0, (size_t) __bss_end - (size_t) __bss);
 	printf("\n\n");
 	WRITE_CSR(stvec, (uint32_t) kernel_entry);
