@@ -1,6 +1,8 @@
 #include "common.h"
 #pragma once
 
+#define SSTATUS_SPIE (1 << 5)
+
 #define PANIC(fmt, ...)                                                        \
     do {                                                                       \
         printf("PANIC: %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__);  \
@@ -34,6 +36,9 @@
 #define PAGE_W    (1 << 2)   // writable
 #define PAGE_X    (1 << 3)   // executable
 #define PAGE_U    (1 << 4)   // user (accessible in user mode)
+
+// the base virtual address of an application image. This needs to match the starting address defined in `user.ld`.
+#define USER_BASE 0x1000000
 
 struct process {
     int pid;              // process ID
